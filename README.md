@@ -30,6 +30,16 @@ La API estará en **http://localhost:8080** y la comprobación pública en [http
 - **Frontend (Vercel):** importa la raíz del repositorio. El archivo `vercel.json` ejecuta el build de `frontend/`. Configura `VITE_API_URL` con la URL pública de Render, sin `/api` al final.
 - **Supabase:** usa el bucket público `product-images`. El backend sube productos y comprobantes por S3 compatible y guarda la URL pública en PostgreSQL.
 
+### Docker local
+
+Con Docker Compose, se ejecuta el frontend en `http://localhost:3000` y el backend en `http://localhost:8080`:
+
+```powershell
+docker compose up --build
+```
+
+El backend lee `backend/.env`. Las imágenes locales se conservan en el volumen Docker `backend_uploads` cuando no se configuró Supabase Storage.
+
 Para crear un Super Admin inicial, define correo institucional y contraseña antes del primer inicio (la contraseña requiere al menos 12 caracteres):
 
 ```powershell
