@@ -199,7 +199,10 @@ public class ApiController {
 		if (((Number) product.get("seller_id")).longValue() == user.id()) {
 			throw ApiException.badRequest("No puedes añadir tu propia publicación al carrito.");
 		}
-		jdbc.update("INSERT IGNORE INTO cart_items (user_id, product_id) VALUES (?, ?)", user.id(), productId);
+		jdbc.update("""
+				INSERT INTO cart_items (user_id, product_id) VALUES (?, ?)
+				ON CONFLICT (user_id, product_id) DO NOTHING
+				""", user.id(), productId);
 		return Map.of("status", "added", "reserved", "false");
 	}
 
@@ -309,7 +312,7 @@ public class ApiController {
 		}
 		jdbc.update("""
 				UPDATE transactions SET status = 'paid', payment_method = ?,
-				  payment_reference = CONCAT('SIM-', id), payout_status = 'pending' WHERE id = ?
+				  payment_reference = 'SIM-' || id::text, payout_status = 'pending' WHERE id = ?
 				""", paymentMethod, id);
 		jdbc.update("DELETE FROM cart_items WHERE product_id = ?", transaction.get("product_id"));
 		return Map.of("status", "paid", "paymentMethod", paymentMethod, "reference", "SIM-" + id);
@@ -454,7 +457,7 @@ public class ApiController {
 		return jdbc.queryForList("""
 				SELECT other.id AS userId, other.full_name AS fullName, other.profile_photo_url AS profilePhotoUrl,
 				       MAX(m.created_at) AS lastMessageAt,
-				       SUBSTRING_INDEX(GROUP_CONCAT(m.body ORDER BY m.created_at DESC SEPARATOR '\\n'), '\\n', 1) AS lastMessage,
+				       (ARRAY_AGG(m.body ORDER BY m.created_at DESC))[1] AS lastMessage,
 				       SUM(CASE WHEN m.recipient_id = ? AND m.read_at IS NULL THEN 1 ELSE 0 END) AS unreadCount
 				FROM messages m
 				JOIN users other ON other.id = CASE WHEN m.sender_id = ? THEN m.recipient_id ELSE m.sender_id END
@@ -585,7 +588,8 @@ public class ApiController {
 				SELECT u.id, u.email, u.full_name AS fullName, u.account_status AS accountStatus,
 				       u.payout_bank AS payoutBank, u.payout_account AS payoutAccount,
 				       u.payout_holder AS payoutHolder, u.payout_identifier AS payoutIdentifier,
-				       u.created_at AS createdAt, GROUP_CONCAT(r.name ORDER BY r.name) AS roles
+				       u.created_at AS createdAt,
+				       STRING_AGG(r.name, ',' ORDER BY r.name) AS roles
 				FROM users u LEFT JOIN user_roles ur ON ur.user_id = u.id
 				LEFT JOIN roles r ON r.id = ur.role_id
 				GROUP BY u.id ORDER BY u.created_at DESC LIMIT 500
@@ -661,7 +665,7 @@ public class ApiController {
 				""", key, value, user.id());
 		jdbc.update("""
 				INSERT INTO security_audit_log (actor_id, action, target_type, details)
-				VALUES (?, 'system_setting_updated', 'system_setting', JSON_OBJECT('key', ?))
+				VALUES (?, 'system_setting_updated', 'system_setting', jsonb_build_object('key', ?))
 				""", user.id(), key);
 		return Map.of("status", "updated");
 	}
@@ -739,7 +743,8 @@ public class ApiController {
 	}
 
 	private static long generatedId(KeyHolder keys) {
-		Number key = keys.getKey();
+		Number key = keys.getKeyList().isEmpty() ? null : (Number) keys.getKeyList().getFirst().values().stream()
+				.filter(Number.class::isInstance).map(Number.class::cast).findFirst().orElse(null);
 		if (key == null) throw new IllegalStateException("La base de datos no devolvió el identificador generado.");
 		return key.longValue();
 	}

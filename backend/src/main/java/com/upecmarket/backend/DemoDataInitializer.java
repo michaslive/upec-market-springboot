@@ -59,6 +59,18 @@ public class DemoDataInitializer implements ApplicationRunner {
 				SELECT ?, ?, ?, ?, ?, 'active'
 				WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = ?)
 				""", email, passwordEncoder.encode(password), passwordEncoder.encode(password), fullName, fullName, email);
+
+		if ("SUPER_ADMIN".equals(role)) {
+			jdbc.update("""
+					INSERT INTO user_roles (user_id, role_id)
+					SELECT u.id, r.id FROM users u, roles r
+					WHERE u.email = ? AND r.name IN ('BUYER', 'SELLER', 'ADMIN', 'SUPER_ADMIN')
+					  AND NOT EXISTS (
+					    SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role_id = r.id
+					  )
+					""", email);
+			return;
+		}
 		jdbc.update("""
 				INSERT INTO user_roles (user_id, role_id)
 				SELECT u.id, r.id FROM users u, roles r
