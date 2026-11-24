@@ -43,7 +43,16 @@ public class ProductService {
 		String search = query == null || query.isBlank() ? null : query.trim();
 		String categoryFilter = category == null || category.isBlank() ? null : category.trim();
 		return products.findPublic(search, categoryFilter, PageRequest.of(0, 100))
-				.stream().map(ProductResponse::from).toList();
+				.stream()
+				.filter(product -> search == null || (
+						product.getTitle().toLowerCase().contains(search.toLowerCase())
+						|| product.getDescription().toLowerCase().contains(search.toLowerCase())
+						|| product.getCategory().getName().toLowerCase().contains(search.toLowerCase())))
+				.filter(product -> categoryFilter == null || (
+						product.getCategory().getName().equalsIgnoreCase(categoryFilter)
+						|| product.getCategory().getSlug().equalsIgnoreCase(categoryFilter)))
+				.map(ProductResponse::from)
+				.toList();
 	}
 
 	@Transactional(readOnly = true)

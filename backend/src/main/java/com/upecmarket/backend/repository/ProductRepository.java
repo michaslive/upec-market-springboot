@@ -18,11 +18,6 @@ public interface ProductRepository extends JpaRepository<ProductEntity, Long> {
 	@Query("""
 			SELECT p FROM ProductEntity p
 			WHERE p.status = 'approved' AND p.deletedAt IS NULL
-			  AND (:search IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :search, '%'))
-			       OR LOWER(p.description) LIKE LOWER(CONCAT('%', :search, '%'))
-			       OR LOWER(p.category.name) LIKE LOWER(CONCAT('%', :search, '%')))
-			  AND (:category IS NULL OR LOWER(p.category.name) = LOWER(:category)
-			       OR LOWER(p.category.slug) = LOWER(:category))
 			ORDER BY p.createdAt DESC
 			""")
 	List<ProductEntity> findPublic(@Param("search") String search, @Param("category") String category, Pageable pageable);
