@@ -19,7 +19,7 @@ services:
       - key: DB_MIN_IDLE
         value: 1
       - key: CORS_ALLOWED_ORIGINS
-        sync: false
+        value: https://upec-market-springboot.vercel.app
       - key: SUPABASE_S3_BUCKET
         value: product-images
       - key: SUPABASE_S3_ENDPOINT
